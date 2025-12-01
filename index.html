@@ -2,19 +2,16 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <title>Desdi despachos version 2</title>
+  <title>Panel DESDI - Aplicaciones Embebidas</title>
 
   <!-- Responsive móvil + safe areas -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
 
-  <!-- PERFORMANCE HINTS: DNS + TCP + TLS warm-up -->
+  <!-- PERFORMANCE HINTS -->
   <link rel="dns-prefetch" href="https://script.google.com">
   <link rel="dns-prefetch" href="https://script.googleusercontent.com">
-  <link rel="dns-prefetch" href="https://googleusercontent.com">
-  <link rel="dns-prefetch" href="https://ssl.gstatic.com">
   <link rel="preconnect" href="https://script.google.com" crossorigin>
-  <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
   <link rel="preconnect" href="https://ssl.gstatic.com" crossorigin>
 
   <style>
@@ -24,266 +21,809 @@
       min-height: 100svh; background: #0b1220; color: #e5e7eb;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
     }
+    
+    /* App Bar */
     .appbar {
       background:#0f172a; padding:10px 12px; display:flex; align-items:center; justify-content:space-between; gap:8px;
       padding-left: calc(env(safe-area-inset-left, 0px) + 12px);
       padding-right: calc(env(safe-area-inset-right, 0px) + 12px);
       box-shadow: 0 2px 10px rgba(0,0,0,.25);
+      flex-shrink: 0;
     }
     .appbar h1 { font-size:16px; margin:0; font-weight:700; letter-spacing:.2px; }
-    .actions { display:flex; gap:6px; }
+    .appbar-actions { display:flex; gap:6px; }
+    
+    /* Botones */
     .btn {
       border:1px solid #334155; background:#111827; color:#e5e7eb; padding:6px 10px; border-radius:10px;
       font-size:12px; line-height:1; cursor:pointer; display:flex; align-items:center; gap:4px;
     }
-    .btn.secondary { background:transparent; border-color:#475569; color:#cbd5e1; }
     .btn:hover { background:#0b1220; }
     .btn:active { transform: translateY(1px); }
-
-    .main { position:relative; flex:1; min-height:0; overflow:hidden; }
-    .frame-wrap { position:absolute; inset:0; }
-    iframe { width:100%; height:100%; border:0; background:#fff; -webkit-overflow-scrolling:touch; }
-
-    .loader {
-      position:absolute; inset:0; display:grid; place-items:center;
-      background: radial-gradient(100% 100% at 0% 0%, rgba(4, 6, 17, 0.75), rgba(4,6,17,0.9) 70%), #040611;
-      z-index:2; transition: opacity .25s ease;
+    .btn.secondary { background:transparent; border-color:#475569; color:#cbd5e1; }
+    .btn.primary { background:#1663ff; border-color:#1663ff; color:white; }
+    
+    /* Contenedor principal */
+    .main-container {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
     }
-    .loader.hidden { opacity:0; pointer-events:none; }
-    .loadcard { display:flex; align-items:center; gap:10px; background:rgba(15,23,42,.6); border:1px solid #1f2937;
-      padding:12px 14px; border-radius:14px; backdrop-filter: blur(4px); box-shadow: 0 10px 30px rgba(0,0,0,.35);}
-    .spinner { width:42px; height:42px; border-radius:50%; border:4px solid #1f2937; border-top-color:#3b82f6; animation:spin .8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loadtext { font-size:14px; color:#cbd5e1; }
-    .progress { margin-top:6px; height:3px; width:160px; background:#1f2937; border-radius:99px; overflow:hidden; }
-    .bar { height:100%; width:0%; background:#3b82f6; transition: width .4s ease; }
-
-    .help { position:absolute; left:50%; transform:translateX(-50%); bottom:12px; font-size:12px; color:#cbd5e1; text-align:center; opacity:.9; }
-    .help a { color:#93c5fd; text-decoration:underline; }
-
-    .camera-notice {
-      position: absolute; top: 12px; right: 12px; background: rgba(59, 130, 246, 0.1);
-      border: 1px solid rgba(59, 130, 246, 0.3); padding: 6px 10px; border-radius: 8px;
-      font-size: 11px; color: #93c5fd; z-index: 10; backdrop-filter: blur(4px);
+    
+    /* Panel de aplicaciones (izquierda) */
+    .apps-sidebar {
+      width: 250px;
+      background: #0f172a;
+      border-right: 1px solid #1f2937;
+      display: flex;
+      flex-direction: column;
+      overflow: auto;
+      transition: transform 0.3s ease;
+      flex-shrink: 0;
+    }
+    
+    .apps-sidebar.hidden {
+      transform: translateX(-100%);
+      width: 0;
+    }
+    
+    .sidebar-header {
+      padding: 16px 12px;
+      border-bottom: 1px solid #1f2937;
+    }
+    
+    .sidebar-header h2 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #cbd5e1;
+      margin: 0 0 4px 0;
+    }
+    
+    .sidebar-header p {
+      font-size: 11px;
+      color: #94a3b8;
+      margin: 0;
+      line-height: 1.3;
+    }
+    
+    /* Lista de apps */
+    .apps-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+    
+    .app-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      color: inherit;
+    }
+    
+    .app-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-left-color: #3b82f6;
+    }
+    
+    .app-item.active {
+      background: rgba(59, 130, 246, 0.1);
+      border-left-color: #3b82f6;
+    }
+    
+    .app-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: #1f2937;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    
+    .app-info {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .app-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #e5e7eb;
+      margin: 0 0 2px 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .app-desc {
+      font-size: 11px;
+      color: #94a3b8;
+      margin: 0;
+      line-height: 1.2;
+    }
+    
+    /* Botón toggle sidebar (móvil) */
+    .toggle-sidebar {
       display: none;
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 100;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      width: 36px;
+      height: 36px;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
     }
-
-    @media (max-width:380px){ .appbar h1{font-size:14px} .btn{font-size:11px; padding:6px 8px} .loadtext{font-size:13px} }
+    
+    /* Área del iframe */
+    .iframe-area {
+      flex: 1;
+      position: relative;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Barra de herramientas del iframe */
+    .iframe-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: #0f172a;
+      border-bottom: 1px solid #1f2937;
+      flex-shrink: 0;
+    }
+    
+    .current-app-info {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    
+    .current-app-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      background: #1f2937;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    
+    .current-app-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #e5e7eb;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    /* Contenedor del iframe */
+    .iframe-container {
+      flex: 1;
+      position: relative;
+      min-height: 0;
+      background: #fff;
+    }
+    
+    .iframe-wrapper {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #fff;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Loader */
+    .loader {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(100% 100% at 0% 0%, rgba(4, 6, 17, 0.75), rgba(4,6,17,0.9) 70%), #040611;
+      z-index: 2;
+      transition: opacity .25s ease;
+    }
+    
+    .loader.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    
+    .loadcard {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(15,23,42,.6);
+      border: 1px solid #1f2937;
+      padding: 12px 14px;
+      border-radius: 14px;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    
+    .spinner {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 4px solid #1f2937;
+      border-top-color: #3b82f6;
+      animation: spin .8s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .loadtext {
+      font-size: 14px;
+      color: #cbd5e1;
+    }
+    
+    .progress {
+      margin-top: 6px;
+      height: 3px;
+      width: 160px;
+      background: #1f2937;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    
+    .bar {
+      height: 100%;
+      width: 0%;
+      background: #3b82f6;
+      transition: width .4s ease;
+    }
+    
+    /* Mensaje de ayuda */
+    .help {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 12px;
+      font-size: 12px;
+      color: #cbd5e1;
+      text-align: center;
+      opacity: .9;
+    }
+    
+    .help a {
+      color: #93c5fd;
+      text-decoration: underline;
+    }
+    
+    /* Botón para abrir en nueva pestaña */
+    .btn-open-new {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      background: rgba(59, 130, 246, 0.1);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      font-size: 11px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    
+    .btn-open-new:hover {
+      background: rgba(59, 130, 246, 0.2);
+    }
+    
+    /* Estado vacío */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      padding: 40px;
+      text-align: center;
+      color: #94a3b8;
+    }
+    
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+    
+    .empty-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0 0 8px 0;
+      color: #cbd5e1;
+    }
+    
+    .empty-text {
+      font-size: 13px;
+      line-height: 1.4;
+      max-width: 300px;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .apps-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: 99;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+      }
+      
+      .toggle-sidebar {
+        display: flex;
+      }
+      
+      .appbar h1 {
+        margin-left: 40px;
+      }
+      
+      .sidebar-header {
+        padding-top: calc(16px + env(safe-area-inset-top));
+      }
+    }
+    
+    @media (max-width: 380px) {
+      .appbar h1 { font-size: 14px; }
+      .btn { font-size: 11px; padding: 6px 8px; }
+      .loadtext { font-size: 13px; }
+      .current-app-title { font-size: 12px; }
+    }
   </style>
 </head>
 <body>
+  <!-- Botón para mostrar/ocultar panel en móvil -->
+  <button class="toggle-sidebar" id="toggleSidebar">☰</button>
+  
+  <!-- Barra superior -->
   <header class="appbar">
-    <h1>📋 Planilla RUTA 700</h1>
-    <div class="actions">
+    <h1 id="pageTitle">🚌 Panel DESDI</h1>
+    <div class="appbar-actions">
       <button class="btn" id="btnReload">↻ Recargar</button>
-      <button class="btn secondary" id="btnCamera">📷 Cámara</button>
-      <a class="btn secondary" id="btnOpen" target="_blank" rel="noopener">↗ Abrir</a>
+      <a class="btn secondary" id="btnOpenNew" target="_blank" rel="noopener">↗ Abrir</a>
     </div>
   </header>
-
-  <div class="camera-notice" id="cameraNotice">
-    Permiso de cámara solicitado. Acepta en el navegador.
-  </div>
-
-  <main class="main">
-    <div class="frame-wrap" id="frameWrap">
-      <!-- El iframe se crea dinámicamente -->
-      <div id="loader" class="loader">
-        <div class="loadcard">
-          <div class="spinner"></div>
-          <div>
-            <div class="loadtext" id="loadText">Preparando la aplicación…</div>
-            <div class="progress"><div class="bar" id="bar"></div></div>
-          </div>
-        </div>
-        <div class="help">
-          Si tarda demasiado o la cámara no funciona, <a id="openLink2" href="#" target="_blank" rel="noopener">ábrela en una pestaña nueva</a>.
+  
+  <div class="main-container">
+    <!-- Panel de aplicaciones (izquierda) -->
+    <div class="apps-sidebar" id="appsSidebar">
+      <div class="sidebar-header">
+        <h2>Aplicaciones DESDI</h2>
+        <p>Selecciona una aplicación para abrirla</p>
+      </div>
+      
+      <div class="apps-list" id="appsList">
+        <!-- Las aplicaciones se cargan dinámicamente -->
+        <div class="empty-state">
+          <div class="empty-icon">📱</div>
+          <div class="empty-title">Cargando aplicaciones...</div>
+          <div class="empty-text">Por favor espera</div>
         </div>
       </div>
     </div>
-  </main>
+    
+    <!-- Área del iframe (derecha) -->
+    <div class="iframe-area">
+      <!-- Barra de herramientas del iframe -->
+      <div class="iframe-toolbar">
+        <div class="current-app-info" id="currentAppInfo">
+          <div class="current-app-icon" id="currentAppIcon">📋</div>
+          <div class="current-app-title" id="currentAppTitle">Selecciona una aplicación</div>
+        </div>
+        
+        <a class="btn-open-new" id="btnOpenCurrent" target="_blank" rel="noopener" style="display: none;">
+          ↗ Abrir
+        </a>
+      </div>
+      
+      <!-- Contenedor del iframe -->
+      <div class="iframe-container">
+        <div class="iframe-wrapper" id="iframeWrapper">
+          <!-- Loader -->
+          <div id="loader" class="loader">
+            <div class="loadcard">
+              <div class="spinner"></div>
+              <div>
+                <div class="loadtext" id="loadText">Cargando aplicación…</div>
+                <div class="progress"><div class="bar" id="bar"></div></div>
+              </div>
+            </div>
+            <div class="help">
+              Si tarda demasiado, <a id="openLink2" href="#" target="_blank" rel="noopener">ábrela en una pestaña nueva</a>.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script>
     (function () {
-      const APP_URL = "https://script.google.com/macros/s/AKfycbxXPbgMVZHrZt28gPRP2cxFMbJI1zxef0I3-215Si-qGuY9uCh6U4GVpxHWq1HqE25Fwg/exec";
-      const frameWrap = document.getElementById('frameWrap');
+      // ====================
+      // CONFIGURACIÓN
+      // ====================
+      
+      // Lista de aplicaciones disponibles - SOLO LAS 2 QUE NECESITAS
+      const APPLICATIONS = [
+        {
+          id: 'ruta700',
+          name: '📋 Planilla RUTA 700',
+          description: 'Despacho de vehículos RUTA 700',
+          url: 'https://script.google.com/macros/s/AKfycbxXPbgMVZHrZt28gPRP2cxFMbJI1zxef0I3-215Si-qGuY9uCh6U4GVpxHWq1HqE25Fwg/exec',
+          icon: '📋',
+          color: '#3b82f6',
+          featured: true
+        },
+        {
+          id: 'cancelacion',
+          name: '❌ Cancelación de Viajes',
+          description: 'Cancelación de viajes programados',
+          url: 'https://script.google.com/macros/s/AKfycbzkDe6hWox2ots2TA_QSIfYj6UinAOg47V5Zsk26H_CbNry5s84bIZLDYvPRE1k3BYv/exec',
+          icon: '❌',
+          color: '#ef4444',
+          featured: true
+        }
+      ];
+      
+      // ====================
+      // VARIABLES GLOBALES
+      // ====================
+      const appsSidebar = document.getElementById('appsSidebar');
+      const appsList = document.getElementById('appsList');
+      const toggleSidebar = document.getElementById('toggleSidebar');
+      const iframeWrapper = document.getElementById('iframeWrapper');
       const loader = document.getElementById('loader');
       const loadText = document.getElementById('loadText');
       const bar = document.getElementById('bar');
       const btnReload = document.getElementById('btnReload');
-      const btnOpen = document.getElementById('btnOpen');
-      const btnCamera = document.getElementById('btnCamera');
+      const btnOpenNew = document.getElementById('btnOpenNew');
+      const btnOpenCurrent = document.getElementById('btnOpenCurrent');
+      const currentAppInfo = document.getElementById('currentAppInfo');
+      const currentAppIcon = document.getElementById('currentAppIcon');
+      const currentAppTitle = document.getElementById('currentAppTitle');
+      const pageTitle = document.getElementById('pageTitle');
       const openLink2 = document.getElementById('openLink2');
-      const cameraNotice = document.getElementById('cameraNotice');
-
-      btnOpen.href = APP_URL;
-      openLink2.href = APP_URL;
-
-      // Red lenta: sugerir abrir en pestaña
-      try {
-        if (navigator.connection && ['slow-2g','2g'].includes(navigator.connection.effectiveType)) {
-          loadText.textContent = "Conexión lenta detectada. Recomendado abrirla en una pestaña nueva.";
-        }
-      } catch (_) {}
-
-      // Progreso simulado mientras calientan conexiones
-      let p = 0; const tick = () => { p = Math.min(92, p + Math.random()*10 + 3); bar.style.width = p + '%'; };
-      const prog = setInterval(tick, 450);
-
-      let created = false;
-      let currentIframe = null;
       
-      function createIframe(forceReload=false){
-        if (created && !forceReload) return;
-        created = true;
-        
-        const iframe = document.createElement('iframe');
-        iframe.title = "Planilla RUTA 700";
-        iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
-        
-        // PERMISOS ACTUALIZADOS - CRÍTICO PARA CÁMARA
-        iframe.setAttribute('allow', 'camera; microphone; geolocation; display-capture; web-share; clipboard-read; clipboard-write');
-        
-        // Sandbox con permisos ampliados para cámara
-        iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-pointer-lock allow-orientation-lock allow-presentation');
-        
-        // Atributos adicionales para compatibilidad
-        iframe.setAttribute('allowfullscreen', '');
-        iframe.setAttribute('allowtransparency', 'true');
-        iframe.setAttribute('webkitallowfullscreen', '');
-        iframe.setAttribute('mozallowfullscreen', '');
-        
-        // Cache-buster para ciertos navegadores móviles
-        const url = APP_URL + (APP_URL.includes('?') ? '&' : '?') + 't=' + Date.now();
-        iframe.src = url;
-
-        // Manejo de carga
-        iframe.addEventListener('load', function() {
-          clearInterval(prog);
-          bar.style.width = '100%';
-          
-          // Intentar solicitar permisos de cámara después de cargar
-          setTimeout(() => {
-            try {
-              // Notificar al usuario sobre permisos
-              cameraNotice.style.display = 'block';
-              setTimeout(() => {
-                cameraNotice.style.display = 'none';
-              }, 3000);
-            } catch (e) {
-              console.log('Notificación de cámara:', e.message);
-            }
-          }, 500);
-          
-          setTimeout(() => {
-            loader.classList.add('hidden');
-          }, 150);
-        });
-
-        // Manejo de errores
-        iframe.addEventListener('error', function(e) {
-          console.error('Error cargando iframe:', e);
-          loadText.textContent = "Error al cargar. Intenta recargar.";
-        });
-
-        frameWrap.appendChild(iframe);
-        currentIframe = iframe;
-        
-        // Forzar permisos adicionales después de un momento
-        setTimeout(() => {
-          iframe.setAttribute('allow', 'camera *; microphone *; geolocation *');
-        }, 1000);
-      }
-
-      // Función para abrir cámara en nueva pestaña
-      function openCameraInNewTab() {
-        const cameraUrl = APP_URL + '?mode=camera&t=' + Date.now();
-        const newWindow = window.open(cameraUrl, '_blank');
-        
-        if (newWindow) {
-          cameraNotice.textContent = "Abriendo cámara en nueva pestaña...";
-          cameraNotice.style.display = 'block';
-          setTimeout(() => {
-            cameraNotice.style.display = 'none';
-          }, 2000);
-        }
-      }
-
-      // Botón de cámara
-      btnCamera.addEventListener('click', function() {
-        cameraNotice.textContent = "Solicitando acceso a cámara...";
-        cameraNotice.style.display = 'block';
-        
-        // Primero intentar en el iframe actual
-        setTimeout(() => {
-          if (currentIframe && currentIframe.contentWindow) {
-            try {
-              // Enviar mensaje al iframe para activar cámara
-              currentIframe.contentWindow.postMessage('ACTIVATE_CAMERA', '*');
-            } catch (e) {
-              console.log('No se puede acceder al iframe:', e);
-            }
-          }
-          
-          // Si después de 2 segundos no responde, sugerir nueva pestaña
-          setTimeout(() => {
-            if (cameraNotice.style.display === 'block') {
-              cameraNotice.textContent = "Usa el botón de cámara dentro de la app o abre en nueva pestaña";
-            }
-          }, 2000);
-        }, 100);
-      });
-
-      // Escuchar mensajes del iframe
-      window.addEventListener('message', function(event) {
-        if (event.data === 'CAMERA_PERMISSION_NEEDED') {
-          cameraNotice.textContent = "Haz clic en permitir cuando el navegador lo solicite";
-          cameraNotice.style.display = 'block';
-          setTimeout(() => {
-            cameraNotice.style.display = 'none';
-          }, 3000);
-        }
-      });
-
-      // Crear iframe tras el primer idle o pequeña espera
-      if ('requestIdleCallback' in window) {
-        requestIdleCallback(() => createIframe(), { timeout: 1200 });
-      } else {
-        setTimeout(() => createIframe(), 300);
-      }
-
-      // También ante primera interacción
-      ['click','keydown','touchstart'].forEach(ev => {
-        window.addEventListener(ev, () => createIframe(), { once: true, passive: true });
-      });
-
-      // Recargar: elimina y recrea
-      btnReload.addEventListener('click', () => {
+      let currentApp = null;
+      let currentIframe = null;
+      let created = false;
+      let loadingProgress = 0;
+      let progressInterval = null;
+      
+      // ====================
+      // FUNCIONES UTILITARIAS
+      // ====================
+      
+      function showLoader(text = 'Cargando aplicación…') {
+        loadText.textContent = text;
         loader.classList.remove('hidden');
-        loadText.textContent = "Recargando…";
-        bar.style.width = '0%'; p = 0;
         
+        // Animación de progreso
+        loadingProgress = 0;
+        if (progressInterval) clearInterval(progressInterval);
+        
+        progressInterval = setInterval(() => {
+          loadingProgress = Math.min(95, loadingProgress + Math.random() * 10 + 3);
+          bar.style.width = loadingProgress + '%';
+        }, 450);
+      }
+      
+      function hideLoader() {
+        clearInterval(progressInterval);
+        bar.style.width = '100%';
+        setTimeout(() => {
+          loader.classList.add('hidden');
+          loadingProgress = 0;
+        }, 300);
+      }
+      
+      function isMobile() {
+        return window.innerWidth <= 768;
+      }
+      
+      // ====================
+      // GESTIÓN DE APLICACIONES
+      // ====================
+      
+      function renderAppsList() {
+        if (!appsList) return;
+        
+        appsList.innerHTML = '';
+        
+        if (APPLICATIONS.length === 0) {
+          appsList.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">📱</div>
+              <div class="empty-title">No hay aplicaciones</div>
+              <div class="empty-text">Configura las aplicaciones en el código</div>
+            </div>
+          `;
+          return;
+        }
+        
+        // Mostrar todas las aplicaciones
+        APPLICATIONS.forEach(app => {
+          appsList.appendChild(createAppElement(app));
+        });
+      }
+      
+      function createAppElement(app) {
+        const element = document.createElement('a');
+        element.href = '#';
+        element.className = 'app-item';
+        if (currentApp && currentApp.id === app.id) {
+          element.classList.add('active');
+        }
+        
+        element.innerHTML = `
+          <div class="app-icon" style="background: ${app.color}20; color: ${app.color}">
+            ${app.icon}
+          </div>
+          <div class="app-info">
+            <div class="app-name">${app.name}</div>
+            <div class="app-desc">${app.description}</div>
+          </div>
+        `;
+        
+        element.addEventListener('click', (e) => {
+          e.preventDefault();
+          selectApp(app);
+          
+          // En móvil, cerrar el sidebar después de seleccionar
+          if (isMobile()) {
+            appsSidebar.classList.add('hidden');
+          }
+        });
+        
+        return element;
+      }
+      
+      function selectApp(app) {
+        currentApp = app;
+        
+        // Actualizar UI
+        updateCurrentAppInfo();
+        renderAppsList();
+        
+        // Actualizar botones
+        btnOpenNew.href = app.url;
+        btnOpenCurrent.href = app.url;
+        openLink2.href = app.url;
+        
+        // Mostrar botón de abrir
+        btnOpenCurrent.style.display = 'flex';
+        
+        // Actualizar título de la página
+        pageTitle.textContent = app.name;
+        
+        // Cargar la aplicación en el iframe
+        loadAppInIframe(app);
+      }
+      
+      function updateCurrentAppInfo() {
+        if (!currentApp) return;
+        
+        currentAppIcon.textContent = currentApp.icon;
+        currentAppIcon.style.background = `${currentApp.color}20`;
+        currentAppIcon.style.color = currentApp.color;
+        currentAppTitle.textContent = currentApp.name;
+        currentAppInfo.style.display = 'flex';
+      }
+      
+      // ====================
+      // GESTIÓN DEL IFRAME
+      // ====================
+      
+      function loadAppInIframe(app, forceReload = false) {
+        if (!app) return;
+        
+        showLoader(`Cargando ${app.name}…`);
+        
+        // Verificar si ya existe un iframe
         if (currentIframe) {
           currentIframe.remove();
           currentIframe = null;
         }
         
-        created = false;
-        createIframe(true);
+        // Crear nuevo iframe
+        const iframe = document.createElement('iframe');
+        iframe.title = app.name;
+        iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
+        
+        // Configurar permisos para cámara y otros
+        iframe.setAttribute('allow', 'camera; microphone; geolocation; display-capture; web-share; clipboard-read; clipboard-write');
+        
+        // Sandbox con permisos ampliados
+        iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-pointer-lock allow-orientation-lock allow-presentation');
+        
+        // Atributos adicionales
+        iframe.setAttribute('allowfullscreen', '');
+        iframe.setAttribute('allowtransparency', 'true');
+        iframe.setAttribute('webkitallowfullscreen', '');
+        iframe.setAttribute('mozallowfullscreen', '');
+        
+        // Cache-buster para evitar caché
+        const url = app.url + (app.url.includes('?') ? '&' : '?') + 't=' + Date.now();
+        iframe.src = url;
+        
+        // Manejar carga exitosa
+        iframe.addEventListener('load', () => {
+          hideLoader();
+          console.log(`✅ Aplicación cargada: ${app.name}`);
+          
+          // Forzar permisos adicionales después de cargar
+          setTimeout(() => {
+            iframe.setAttribute('allow', 'camera *; microphone *; geolocation *');
+          }, 1000);
+        });
+        
+        // Manejar errores
+        iframe.addEventListener('error', (e) => {
+          console.error('❌ Error cargando iframe:', e);
+          hideLoader();
+          loadText.textContent = 'Error al cargar la aplicación. Intenta recargar o abrir en una pestaña nueva.';
+        });
+        
+        // Añadir al DOM
+        iframeWrapper.appendChild(iframe);
+        currentIframe = iframe;
+        created = true;
+      }
+      
+      function reloadCurrentApp() {
+        if (!currentApp) return;
+        
+        showLoader('Recargando aplicación…');
+        
+        if (currentIframe) {
+          const url = currentApp.url + (currentApp.url.includes('?') ? '&' : '?') + 't=' + Date.now();
+          currentIframe.src = url;
+        } else {
+          loadAppInIframe(currentApp, true);
+        }
+      }
+      
+      // ====================
+      // EVENT LISTENERS
+      // ====================
+      
+      // Botón recargar
+      btnReload.addEventListener('click', reloadCurrentApp);
+      
+      // Botón abrir en nueva pestaña
+      btnOpenNew.addEventListener('click', (e) => {
+        if (currentApp) {
+          e.preventDefault();
+          window.open(currentApp.url, '_blank');
+        }
       });
-
+      
+      // Botón abrir actual en nueva pestaña
+      btnOpenCurrent.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (currentApp) {
+          window.open(currentApp.url, '_blank');
+        }
+      });
+      
+      // Toggle sidebar en móvil
+      toggleSidebar.addEventListener('click', () => {
+        appsSidebar.classList.toggle('hidden');
+      });
+      
+      // Cerrar sidebar al hacer clic fuera (en móvil)
+      document.addEventListener('click', (e) => {
+        if (isMobile() && 
+            !appsSidebar.contains(e.target) && 
+            !toggleSidebar.contains(e.target) &&
+            !appsSidebar.classList.contains('hidden')) {
+          appsSidebar.classList.add('hidden');
+        }
+      });
+      
+      // Redimensionar ventana
+      window.addEventListener('resize', () => {
+        if (!isMobile()) {
+          appsSidebar.classList.remove('hidden');
+        }
+      });
+      
+      // Detectar red lenta
+      try {
+        if (navigator.connection && ['slow-2g', '2g'].includes(navigator.connection.effectiveType)) {
+          loadText.textContent = "Conexión lenta detectada. Recomendado abrir en pestaña nueva.";
+        }
+      } catch (_) {}
+      
       // Fallback si tarda demasiado
       setTimeout(() => {
         if (!loader.classList.contains('hidden')) {
           loadText.textContent = "Sigue cargando… Puedes abrirla en una pestaña para acelerar.";
         }
       }, 10000);
-
-      // Limpiar notificación de cámara al hacer clic
-      cameraNotice.addEventListener('click', () => {
-        cameraNotice.style.display = 'none';
-      });
-
+      
+      // ====================
+      // INICIALIZACIÓN
+      // ====================
+      
+      function init() {
+        // Renderizar lista de aplicaciones
+        renderAppsList();
+        
+        // Seleccionar primera aplicación por defecto
+        if (APPLICATIONS.length > 0) {
+          selectApp(APPLICATIONS[0]); // Primera app (Planilla RUTA 700)
+        }
+        
+        // Configurar estado inicial para móvil
+        if (isMobile()) {
+          appsSidebar.classList.add('hidden');
+        }
+      }
+      
+      // Inicializar cuando el DOM esté listo
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+      
+      // Función para añadir aplicaciones dinámicamente (puedes llamarla desde consola si necesitas más)
+      window.addApp = function(appConfig) {
+        if (!appConfig || !appConfig.id || !appConfig.url) {
+          console.error('Configuración de app inválida');
+          return;
+        }
+        
+        // Verificar si ya existe
+        if (APPLICATIONS.some(app => app.id === appConfig.id)) {
+          console.warn(`La app con ID "${appConfig.id}" ya existe`);
+          return;
+        }
+        
+        // Añadir valores por defecto
+        const newApp = {
+          icon: '📱',
+          color: '#6b7280',
+          description: 'Aplicación embebida',
+          featured: false,
+          ...appConfig
+        };
+        
+        APPLICATIONS.push(newApp);
+        renderAppsList();
+        console.log(`✅ Aplicación "${newApp.name}" añadida`);
+      };
+      
     })();
   </script>
 </body>
