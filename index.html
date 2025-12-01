@@ -34,10 +34,11 @@
     .actions { display:flex; gap:6px; }
     .btn {
       border:1px solid #334155; background:#111827; color:#e5e7eb; padding:6px 10px; border-radius:10px;
-      font-size:12px; line-height:1; cursor:pointer;
+      font-size:12px; line-height:1; cursor:pointer; display:flex; align-items:center; gap:4px;
     }
     .btn.secondary { background:transparent; border-color:#475569; color:#cbd5e1; }
     .btn:hover { background:#0b1220; }
+    .btn:active { transform: translateY(1px); }
 
     .main { position:relative; flex:1; min-height:0; overflow:hidden; }
     .frame-wrap { position:absolute; inset:0; }
@@ -60,6 +61,13 @@
     .help { position:absolute; left:50%; transform:translateX(-50%); bottom:12px; font-size:12px; color:#cbd5e1; text-align:center; opacity:.9; }
     .help a { color:#93c5fd; text-decoration:underline; }
 
+    .camera-notice {
+      position: absolute; top: 12px; right: 12px; background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3); padding: 6px 10px; border-radius: 8px;
+      font-size: 11px; color: #93c5fd; z-index: 10; backdrop-filter: blur(4px);
+      display: none;
+    }
+
     @media (max-width:380px){ .appbar h1{font-size:14px} .btn{font-size:11px; padding:6px 8px} .loadtext{font-size:13px} }
   </style>
 </head>
@@ -67,14 +75,19 @@
   <header class="appbar">
     <h1>📋 Planilla RUTA 700</h1>
     <div class="actions">
-      <button class="btn" id="btnReload">Recargar</button>
-      <a class="btn secondary" id="btnOpen" target="_blank" rel="noopener">Abrir en pestaña</a>
+      <button class="btn" id="btnReload">↻ Recargar</button>
+      <button class="btn secondary" id="btnCamera">📷 Cámara</button>
+      <a class="btn secondary" id="btnOpen" target="_blank" rel="noopener">↗ Abrir</a>
     </div>
   </header>
 
+  <div class="camera-notice" id="cameraNotice">
+    Permiso de cámara solicitado. Acepta en el navegador.
+  </div>
+
   <main class="main">
     <div class="frame-wrap" id="frameWrap">
-      <!-- El iframe se crea dinámicamente para no bloquear el primer render -->
+      <!-- El iframe se crea dinámicamente -->
       <div id="loader" class="loader">
         <div class="loadcard">
           <div class="spinner"></div>
@@ -84,7 +97,7 @@
           </div>
         </div>
         <div class="help">
-          Si tarda demasiado, <a id="openLink2" href="#" target="_blank" rel="noopener">ábrela en una pestaña nueva</a>.
+          Si tarda demasiado o la cámara no funciona, <a id="openLink2" href="#" target="_blank" rel="noopener">ábrela en una pestaña nueva</a>.
         </div>
       </div>
     </div>
@@ -99,7 +112,9 @@
       const bar = document.getElementById('bar');
       const btnReload = document.getElementById('btnReload');
       const btnOpen = document.getElementById('btnOpen');
+      const btnCamera = document.getElementById('btnCamera');
       const openLink2 = document.getElementById('openLink2');
+      const cameraNotice = document.getElementById('cameraNotice');
 
       btnOpen.href = APP_URL;
       openLink2.href = APP_URL;
@@ -116,28 +131,119 @@
       const prog = setInterval(tick, 450);
 
       let created = false;
+      let currentIframe = null;
+      
       function createIframe(forceReload=false){
         if (created && !forceReload) return;
         created = true;
+        
         const iframe = document.createElement('iframe');
         iframe.title = "Planilla RUTA 700";
         iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
-        iframe.setAttribute('allow', 'web-share; clipboard-read; clipboard-write'); // delega permisos
-        iframe.setAttribute('sandbox', 'allow-forms allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox');
-
+        
+        // PERMISOS ACTUALIZADOS - CRÍTICO PARA CÁMARA
+        iframe.setAttribute('allow', 'camera; microphone; geolocation; display-capture; web-share; clipboard-read; clipboard-write');
+        
+        // Sandbox con permisos ampliados para cámara
+        iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-pointer-lock allow-orientation-lock allow-presentation');
+        
+        // Atributos adicionales para compatibilidad
+        iframe.setAttribute('allowfullscreen', '');
+        iframe.setAttribute('allowtransparency', 'true');
+        iframe.setAttribute('webkitallowfullscreen', '');
+        iframe.setAttribute('mozallowfullscreen', '');
+        
         // Cache-buster para ciertos navegadores móviles
         const url = APP_URL + (APP_URL.includes('?') ? '&' : '?') + 't=' + Date.now();
         iframe.src = url;
 
-        // Oculta loader al cargar
-        iframe.addEventListener('load', () => {
+        // Manejo de carga
+        iframe.addEventListener('load', function() {
           clearInterval(prog);
           bar.style.width = '100%';
-          setTimeout(()=> loader.classList.add('hidden'), 150);
+          
+          // Intentar solicitar permisos de cámara después de cargar
+          setTimeout(() => {
+            try {
+              // Notificar al usuario sobre permisos
+              cameraNotice.style.display = 'block';
+              setTimeout(() => {
+                cameraNotice.style.display = 'none';
+              }, 3000);
+            } catch (e) {
+              console.log('Notificación de cámara:', e.message);
+            }
+          }, 500);
+          
+          setTimeout(() => {
+            loader.classList.add('hidden');
+          }, 150);
+        });
+
+        // Manejo de errores
+        iframe.addEventListener('error', function(e) {
+          console.error('Error cargando iframe:', e);
+          loadText.textContent = "Error al cargar. Intenta recargar.";
         });
 
         frameWrap.appendChild(iframe);
+        currentIframe = iframe;
+        
+        // Forzar permisos adicionales después de un momento
+        setTimeout(() => {
+          iframe.setAttribute('allow', 'camera *; microphone *; geolocation *');
+        }, 1000);
       }
+
+      // Función para abrir cámara en nueva pestaña
+      function openCameraInNewTab() {
+        const cameraUrl = APP_URL + '?mode=camera&t=' + Date.now();
+        const newWindow = window.open(cameraUrl, '_blank');
+        
+        if (newWindow) {
+          cameraNotice.textContent = "Abriendo cámara en nueva pestaña...";
+          cameraNotice.style.display = 'block';
+          setTimeout(() => {
+            cameraNotice.style.display = 'none';
+          }, 2000);
+        }
+      }
+
+      // Botón de cámara
+      btnCamera.addEventListener('click', function() {
+        cameraNotice.textContent = "Solicitando acceso a cámara...";
+        cameraNotice.style.display = 'block';
+        
+        // Primero intentar en el iframe actual
+        setTimeout(() => {
+          if (currentIframe && currentIframe.contentWindow) {
+            try {
+              // Enviar mensaje al iframe para activar cámara
+              currentIframe.contentWindow.postMessage('ACTIVATE_CAMERA', '*');
+            } catch (e) {
+              console.log('No se puede acceder al iframe:', e);
+            }
+          }
+          
+          // Si después de 2 segundos no responde, sugerir nueva pestaña
+          setTimeout(() => {
+            if (cameraNotice.style.display === 'block') {
+              cameraNotice.textContent = "Usa el botón de cámara dentro de la app o abre en nueva pestaña";
+            }
+          }, 2000);
+        }, 100);
+      });
+
+      // Escuchar mensajes del iframe
+      window.addEventListener('message', function(event) {
+        if (event.data === 'CAMERA_PERMISSION_NEEDED') {
+          cameraNotice.textContent = "Haz clic en permitir cuando el navegador lo solicite";
+          cameraNotice.style.display = 'block';
+          setTimeout(() => {
+            cameraNotice.style.display = 'none';
+          }, 3000);
+        }
+      });
 
       // Crear iframe tras el primer idle o pequeña espera
       if ('requestIdleCallback' in window) {
@@ -156,8 +262,12 @@
         loader.classList.remove('hidden');
         loadText.textContent = "Recargando…";
         bar.style.width = '0%'; p = 0;
-        const old = frameWrap.querySelector('iframe');
-        if (old) old.remove();
+        
+        if (currentIframe) {
+          currentIframe.remove();
+          currentIframe = null;
+        }
+        
         created = false;
         createIframe(true);
       });
@@ -168,8 +278,13 @@
           loadText.textContent = "Sigue cargando… Puedes abrirla en una pestaña para acelerar.";
         }
       }, 10000);
+
+      // Limpiar notificación de cámara al hacer clic
+      cameraNotice.addEventListener('click', () => {
+        cameraNotice.style.display = 'none';
+      });
+
     })();
   </script>
 </body>
 </html>
-
