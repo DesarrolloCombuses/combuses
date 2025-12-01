@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Desdi despachos version 2</title>
+
+  <!-- Responsive móvil + safe areas -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+
+  <!-- PERFORMANCE HINTS: DNS + TCP + TLS warm-up -->
+  <link rel="dns-prefetch" href="https://script.google.com">
+  <link rel="dns-prefetch" href="https://script.googleusercontent.com">
+  <link rel="dns-prefetch" href="https://googleusercontent.com">
+  <link rel="dns-prefetch" href="https://ssl.gstatic.com">
+  <link rel="preconnect" href="https://script.google.com" crossorigin>
+  <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
+  <link rel="preconnect" href="https://ssl.gstatic.com" crossorigin>
+
+  <style>
+    html,body { height: 100%; margin: 0; }
+    body {
+      display: flex; flex-direction: column;
+      min-height: 100svh; background: #0b1220; color: #e5e7eb;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+    .appbar {
+      background:#0f172a; padding:10px 12px; display:flex; align-items:center; justify-content:space-between; gap:8px;
+      padding-left: calc(env(safe-area-inset-left, 0px) + 12px);
+      padding-right: calc(env(safe-area-inset-right, 0px) + 12px);
+      box-shadow: 0 2px 10px rgba(0,0,0,.25);
+    }
+    .appbar h1 { font-size:16px; margin:0; font-weight:700; letter-spacing:.2px; }
+    .actions { display:flex; gap:6px; }
+    .btn {
+      border:1px solid #334155; background:#111827; color:#e5e7eb; padding:6px 10px; border-radius:10px;
+      font-size:12px; line-height:1; cursor:pointer;
+    }
+    .btn.secondary { background:transparent; border-color:#475569; color:#cbd5e1; }
+    .btn:hover { background:#0b1220; }
+
+    .main { position:relative; flex:1; min-height:0; overflow:hidden; }
+    .frame-wrap { position:absolute; inset:0; }
+    iframe { width:100%; height:100%; border:0; background:#fff; -webkit-overflow-scrolling:touch; }
+
+    .loader {
+      position:absolute; inset:0; display:grid; place-items:center;
+      background: radial-gradient(100% 100% at 0% 0%, rgba(4, 6, 17, 0.75), rgba(4,6,17,0.9) 70%), #040611;
+      z-index:2; transition: opacity .25s ease;
+    }
+    .loader.hidden { opacity:0; pointer-events:none; }
+    .loadcard { display:flex; align-items:center; gap:10px; background:rgba(15,23,42,.6); border:1px solid #1f2937;
+      padding:12px 14px; border-radius:14px; backdrop-filter: blur(4px); box-shadow: 0 10px 30px rgba(0,0,0,.35);}
+    .spinner { width:42px; height:42px; border-radius:50%; border:4px solid #1f2937; border-top-color:#3b82f6; animation:spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loadtext { font-size:14px; color:#cbd5e1; }
+    .progress { margin-top:6px; height:3px; width:160px; background:#1f2937; border-radius:99px; overflow:hidden; }
+    .bar { height:100%; width:0%; background:#3b82f6; transition: width .4s ease; }
+
+    .help { position:absolute; left:50%; transform:translateX(-50%); bottom:12px; font-size:12px; color:#cbd5e1; text-align:center; opacity:.9; }
+    .help a { color:#93c5fd; text-decoration:underline; }
+
+    @media (max-width:380px){ .appbar h1{font-size:14px} .btn{font-size:11px; padding:6px 8px} .loadtext{font-size:13px} }
+  </style>
+</head>
+<body>
+  <header class="appbar">
+    <h1>📋 Planilla RUTA 700</h1>
+    <div class="actions">
+      <button class="btn" id="btnReload">Recargar</button>
+      <a class="btn secondary" id="btnOpen" target="_blank" rel="noopener">Abrir en pestaña</a>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="frame-wrap" id="frameWrap">
+      <!-- El iframe se crea dinámicamente para no bloquear el primer render -->
+      <div id="loader" class="loader">
+        <div class="loadcard">
+          <div class="spinner"></div>
+          <div>
+            <div class="loadtext" id="loadText">Preparando la aplicación…</div>
+            <div class="progress"><div class="bar" id="bar"></div></div>
+          </div>
+        </div>
+        <div class="help">
+          Si tarda demasiado, <a id="openLink2" href="#" target="_blank" rel="noopener">ábrela en una pestaña nueva</a>.
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      const APP_URL = "https://script.google.com/macros/s/AKfycbxXPbgMVZHrZt28gPRP2cxFMbJI1zxef0I3-215Si-qGuY9uCh6U4GVpxHWq1HqE25Fwg/exec";
+      const frameWrap = document.getElementById('frameWrap');
+      const loader = document.getElementById('loader');
+      const loadText = document.getElementById('loadText');
+      const bar = document.getElementById('bar');
+      const btnReload = document.getElementById('btnReload');
+      const btnOpen = document.getElementById('btnOpen');
+      const openLink2 = document.getElementById('openLink2');
+
+      btnOpen.href = APP_URL;
+      openLink2.href = APP_URL;
+
+      // Red lenta: sugerir abrir en pestaña
+      try {
+        if (navigator.connection && ['slow-2g','2g'].includes(navigator.connection.effectiveType)) {
+          loadText.textContent = "Conexión lenta detectada. Recomendado abrirla en una pestaña nueva.";
+        }
+      } catch (_) {}
+
+      // Progreso simulado mientras calientan conexiones
+      let p = 0; const tick = () => { p = Math.min(92, p + Math.random()*10 + 3); bar.style.width = p + '%'; };
+      const prog = setInterval(tick, 450);
+
+      let created = false;
+      function createIframe(forceReload=false){
+        if (created && !forceReload) return;
+        created = true;
+        const iframe = document.createElement('iframe');
+        iframe.title = "Planilla RUTA 700";
+        iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
+        iframe.setAttribute('allow', 'web-share; clipboard-read; clipboard-write'); // delega permisos
+        iframe.setAttribute('sandbox', 'allow-forms allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox');
+
+        // Cache-buster para ciertos navegadores móviles
+        const url = APP_URL + (APP_URL.includes('?') ? '&' : '?') + 't=' + Date.now();
+        iframe.src = url;
+
+        // Oculta loader al cargar
+        iframe.addEventListener('load', () => {
+          clearInterval(prog);
+          bar.style.width = '100%';
+          setTimeout(()=> loader.classList.add('hidden'), 150);
+        });
+
+        frameWrap.appendChild(iframe);
+      }
+
+      // Crear iframe tras el primer idle o pequeña espera
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => createIframe(), { timeout: 1200 });
+      } else {
+        setTimeout(() => createIframe(), 300);
+      }
+
+      // También ante primera interacción
+      ['click','keydown','touchstart'].forEach(ev => {
+        window.addEventListener(ev, () => createIframe(), { once: true, passive: true });
+      });
+
+      // Recargar: elimina y recrea
+      btnReload.addEventListener('click', () => {
+        loader.classList.remove('hidden');
+        loadText.textContent = "Recargando…";
+        bar.style.width = '0%'; p = 0;
+        const old = frameWrap.querySelector('iframe');
+        if (old) old.remove();
+        created = false;
+        createIframe(true);
+      });
+
+      // Fallback si tarda demasiado
+      setTimeout(() => {
+        if (!loader.classList.contains('hidden')) {
+          loadText.textContent = "Sigue cargando… Puedes abrirla en una pestaña para acelerar.";
+        }
+      }, 10000);
+    })();
+  </script>
+</body>
+</html>
+
