@@ -308,6 +308,7 @@ function loadIframe(url){
   iframeWrapper.appendChild(iframe);
   currentIframe = iframe;
 }
+  
 
 btnReload.onclick = () => currentApp && loadIframe(currentApp.url);
 btnOpen.onclick = e => { e.preventDefault(); currentApp && window.open(currentApp.url); };
